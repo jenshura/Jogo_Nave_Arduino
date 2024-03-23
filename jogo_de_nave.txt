@@ -1,0 +1,182 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+#define btcima 8
+#define btbaixo 9
+#define bttiro 10
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+int vTela, maxPontos, vel, pontos, pNaveX, pNaveY, pAsteroideX, pAsteroideY, pEnergiaX, pEnergiaY, pTiroX, pTiroY;
+bool jogoAtivo, tiro, pilha;
+double energia;
+
+byte nave[8] = { B11000, B01100, B01110, B01111, B01111, B01110, B01100, B11000 };
+byte asteroide[8] = { B00000, B00100, B01110, B10111, B11101, B01110, B00100, B00000 };
+byte explosao[8] = { B10001, B10101, B01010, B00100, B00100, B01010, B10101, B10001 };
+byte energia[8] = { B01110, B11011, B10001, B10101, B10101, B10101, B10001, B11111 };
+byte tiro[8] = { B00000, B00000, B00000, B00111, B00111, B00000, B00000, B00000 };
+
+void setup() {
+	vTela = pontos = pNaveX = pNaveY = pAsteroideY = pEnergiaY = pTiroY = 0;
+	maxPontos = 10;
+	pTiroX = -1;
+	pAsteroideX = 12;
+	vel = pEnergiaX = 100;
+	jogoAtivo = true;
+	tiro = pilha = false;
+
+	pinMode(bttiro, INPUT);
+	lcd.init();
+	lcd.backlight();
+	lcd.createChar(1, nave);
+	lcd.createChar(2, asteroide);
+	lcd.createChar(3, explosao);
+	lcd.createChar(4, energia);
+	lcd.createChar(5, tiro);
+
+	lcd.clear();
+	lcd.setCursor(0, 0);
+	lcd.print("   ASTEROID   ");
+	delay(2000);
+	lcd.clear();
+}
+
+void loop() {
+	if (jogoAtivo) {
+		energia -= 0.25;
+		lcd.clear();
+
+		if (energia <= 0) {
+			jogoAtivo = false;
+			desenharExplosao(pNaveX, pNaveY);
+			vTela = 2;
+		}
+
+		painel();
+		movimentarNave();
+		movimentarAsteroide();
+		desenharTiro();
+
+		if (pAsteroideX < 0) {
+			pAsteroideX = 12;
+			pAsteroideY = random(0, 2);
+		}
+
+		if (pTiroX > 16) {
+			tiro = false;
+			pTiroX = -1;
+		}
+
+		if (pytiro == pyaste && (pxtiro == pxaste + 1 || pxtiro == pxaste)) {
+			tiro = false;
+			pTiroX = -1;
+			desenharExplosao(pAsteroideX, pAsteroideY);
+			pAsteroideY = random(0, 2);
+			pAsteroideX = 12;
+			pontos += 2;
+			if (pontos >= maxPontos) {
+				jogoAtivo = false;
+				vTela = 1;
+			}
+		}
+
+		if (pNaveX == pAsteroideX && pNaveY == pAsteroideY) {
+			jogoAtivo = false;
+			desenharExplosao(pNaveX, pAsteroideY);
+			vTela = 2;
+		}
+
+		if (!pilha && random(0, 60) > 58) {
+			pEnergiaX = 12;
+			pilha = true;
+			pEnergiaY = random(0, 2);
+		}
+		else {
+			movimentarEnergia();
+		}
+
+		delay(vel);
+	}
+	else {
+		exibirTelaFinal();
+	}
+}
+
+void painel()
+{
+	lcd.setCursor(13, 0);
+	lcd.print(pontos);
+	lcd.setCursor(13, 1);
+	lcd.print(energia);
+}
+
+void movimentarNave() {
+	if (digitalRead(btcima) == 1) pNaveY = 0;
+	if (digitalRead(btbaixo) == 1) pNaveY = 1;
+	if (digitalRead(bttiro) == 1) {
+		pTiroX = 1;
+		tiro = true;
+		pTiroY = pNaveY;
+	}
+
+	lcd.setCursor(pNaveX, pNaveY);
+	lcd.write(1);
+}
+
+void movimentarAsteroide() {
+	lcd.setCursor(pAsteroideX -= 1, pAsteroideY);
+	lcd.write(2);
+}
+
+void desenharExplosao(int x, int y) {
+	lcd.setCursor(x, y);
+	lcd.write(3);
+	delay(1000);
+	lcd.clear();
+}
+
+void desenharTiro() {
+	if (!tiro) return;
+	lcd.setCursor(pTiroX, pTiroY);
+	lcd.write(5);
+	pxtiro += 1;
+}
+
+void movimentarEnergia() {
+	if (pilha) {
+		lcd.setCursor(posicaoEnergiaX -= 1, posicaoEnergiaY);
+		lcd.write(4);
+
+		if (posicaoNaveY == posicaoEnergiaY && (posicaoNaveX == posicaoEnergiaX + 1 || posicaoNaveX == posicaoEnergiaX)) {
+			pilha = false;
+			posicaoEnergiaX = -1;
+			energia = 100;
+		}
+	}
+}
+
+void exibirTelaFinal() {
+	// Neste caso o switch não havia necessidade.
+	lcd.setCursor(9, 0);
+	lcd.print("pts:");
+	lcd.setCursor(13, 0);
+	lcd.print(pontos);
+	lcd.setCursor(1, 0);
+	lcd.print(vTela ? "GANHOU" : "PERDEU"); // If dento do código. Veja se funciona em C.
+	lcd.setCursor(0, 1);
+	lcd.print("Pressione Tiro");
+
+	if (digitalRead(bttiro) == 1) reiniciarJogo();
+}
+
+void reiniciarJogo() {
+	vTela = pontos = pNaveX = pNaveY = pAsteroideY = pEnergiaY = pTiroY = 0;
+	maxPontos = 10;
+	pTiroX = -1;
+	pAsteroideX = 12;
+	vel = pEnergiaX = 100;
+	jogoAtivo = true;
+	tiro = pilha = false;
+	lcd.clear();
+}
