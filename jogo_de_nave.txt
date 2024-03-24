@@ -8,8 +8,8 @@
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 int vTela, maxPontos, vel, pontos, pNaveX, pNaveY, pAsteroideX, pAsteroideY, pEnergiaX, pEnergiaY, pTiroX, pTiroY;
-bool jogoAtivo, tiro, pilha;
-double energia;
+bool jogoAtivo, vtiro, vpilha;
+double venergia;
 
 byte nave[8] = { B11000, B01100, B01110, B01111, B01111, B01110, B01100, B11000 };
 byte asteroide[8] = { B00000, B00100, B01110, B10111, B11101, B01110, B00100, B00000 };
@@ -24,7 +24,7 @@ void setup() {
 	pAsteroideX = 12;
 	vel = pEnergiaX = 100;
 	jogoAtivo = true;
-	tiro = pilha = false;
+	vtiro = vpilha = false;
 
 	pinMode(bttiro, INPUT);
 	lcd.init();
@@ -44,7 +44,7 @@ void setup() {
 
 void loop() {
 	if (jogoAtivo) {
-		energia -= 0.25;
+		venergia -= 0.25;
 		lcd.clear();
 
 		if (energia <= 0) {
@@ -64,12 +64,12 @@ void loop() {
 		}
 
 		if (pTiroX > 16) {
-			tiro = false;
+			vtiro = false;
 			pTiroX = -1;
 		}
 
-		if (pytiro == pyaste && (pxtiro == pxaste + 1 || pxtiro == pxaste)) {
-			tiro = false;
+		if (pTiroY == pAsteroideY && (pTiroX == pAsteroideX + 1 || pTiroX == pAsteroideX)) {
+			vtiro = false;
 			pTiroX = -1;
 			desenharExplosao(pAsteroideX, pAsteroideY);
 			pAsteroideY = random(0, 2);
@@ -87,9 +87,9 @@ void loop() {
 			vTela = 2;
 		}
 
-		if (!pilha && random(0, 60) > 58) {
+		if (!vpilha && random(0, 60) > 58) {
 			pEnergiaX = 12;
-			pilha = true;
+			vpilha = true;
 			pEnergiaY = random(0, 2);
 		}
 		else {
@@ -108,7 +108,7 @@ void painel()
 	lcd.setCursor(13, 0);
 	lcd.print(pontos);
 	lcd.setCursor(13, 1);
-	lcd.print(energia);
+	lcd.print(venergia);
 }
 
 void movimentarNave() {
@@ -116,7 +116,7 @@ void movimentarNave() {
 	if (digitalRead(btbaixo) == 1) pNaveY = 1;
 	if (digitalRead(bttiro) == 1) {
 		pTiroX = 1;
-		tiro = true;
+		vtiro = true;
 		pTiroY = pNaveY;
 	}
 
@@ -140,18 +140,18 @@ void desenharTiro() {
 	if (!tiro) return;
 	lcd.setCursor(pTiroX, pTiroY);
 	lcd.write(5);
-	pxtiro += 1;
+	pTiroX += 1;
 }
 
 void movimentarEnergia() {
-	if (pilha) {
-		lcd.setCursor(posicaoEnergiaX -= 1, posicaoEnergiaY);
+	if (vpilha) {
+		lcd.setCursor(pEnergiaX -= 1, pEnergiaY);
 		lcd.write(4);
 
-		if (posicaoNaveY == posicaoEnergiaY && (posicaoNaveX == posicaoEnergiaX + 1 || posicaoNaveX == posicaoEnergiaX)) {
-			pilha = false;
-			posicaoEnergiaX = -1;
-			energia = 100;
+		if (pNaveY == pEnergiaY && (pNaveX == pEnergiaX + 1 || pNaveX == pEnergiaX)) {
+			vpilha = false;
+			pEnergiaX = -1;
+			venergia = 100;
 		}
 	}
 }
@@ -177,6 +177,6 @@ void reiniciarJogo() {
 	pAsteroideX = 12;
 	vel = pEnergiaX = 100;
 	jogoAtivo = true;
-	tiro = pilha = false;
+	vtiro = vpilha = false;
 	lcd.clear();
 }
